@@ -1,0 +1,135 @@
+{
+  "info": {
+    "name": "Pokemon TCG FDE Ingestion & Analytics API",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "1. Health Check (Public)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status code is 200 OK', function () { pm.response.to.have.status(200); });",
+              "pm.test('Service reports healthy status', function () { pm.expect(pm.response.json().status).to.eql('healthy'); });"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": "{{base_url}}/health"
+      }
+    },
+    {
+      "name": "2. Security Check - Missing API Key (401)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Rejects unauthenticated request with 401 Unauthorized', function () { pm.response.to.have.status(401); });"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": "{{base_url}}/v1/cards?set_id={{set_id}}"
+      }
+    },
+    {
+      "name": "3. Sync Expansion Set from TCGdex (POST)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Sync returns 200 OK', function () { pm.response.to.have.status(200); });",
+              "pm.test('Payload confirms clean records', function () { pm.expect(pm.response.json().ingested_clean_count).to.be.above(0); });"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "X-API-Key", "value": "{{api_key}}" }
+        ],
+        "url": "{{base_url}}/v1/sync/set/{{set_id}}?limit=40"
+      }
+    },
+    {
+      "name": "4. Query Filtered Cards (Parquet SLA Check)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status code is 200 OK', function () { pm.response.to.have.status(200); });",
+              "pm.test('Cached Parquet query responds under 250ms', function () { pm.expect(pm.response.responseTime).to.be.below(250); });"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          { "key": "X-API-Key", "value": "{{api_key}}" }
+        ],
+        "url": "{{base_url}}/v1/cards?set_id={{set_id}}&min_hp=50&limit=10"
+      }
+    },
+    {
+      "name": "5. Expansion Set Analytics",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status code is 200 OK', function () { pm.response.to.have.status(200); });",
+              "pm.test('Analytics contains rarity distribution', function () { pm.expect(pm.response.json()).to.have.property('rarity_distribution'); });"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          { "key": "X-API-Key", "value": "{{api_key}}" }
+        ],
+        "url": "{{base_url}}/v1/sets/{{set_id}}/analytics"
+      }
+    },
+    {
+      "name": "6. Quarantine Audit Log",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status code is 200 OK', function () { pm.response.to.have.status(200); });",
+              "pm.test('Quarantine exposes count', function () { pm.expect(pm.response.json()).to.have.property('quarantined_count'); });"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          { "key": "X-API-Key", "value": "{{api_key}}" }
+        ],
+        "url": "{{base_url}}/v1/quarantine"
+      }
+    }
+  ]
+}
